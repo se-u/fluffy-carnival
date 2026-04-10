@@ -12,10 +12,26 @@ class Obat extends Model
         'nama_obat',
         'kemasan',
         'harga',
+        'stok',
+    ];
+
+    protected $casts = [
+        'harga' => 'integer',
+        'stok' => 'integer',
     ];
 
     public function detailPeriksas()
     {
         return $this->hasMany(DetailPeriksa::class, 'id_obat');
+    }
+
+    public function isLowStock($threshold = 10)
+    {
+        return $this->stok <= $threshold;
+    }
+
+    public function isOutOfStock()
+    {
+        return $this->stok <= 0;
     }
 }
