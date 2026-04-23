@@ -54,7 +54,7 @@
                                 <td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">{{ $jadwal->no_antrian_sekarang }}</span></td>
                                 <td class="px-6 py-4">
                                     @if(!$hasActiveQueue)
-                                        <button class="bg-[#2d4499] hover:bg-[#1e2d6b] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200" onclick="showDaftarModal({{ $jadwal->id }}, '{{ $jadwal->dokter->poli->nama_poli }}', '{{ $jadwal->dokter->nama }}', '{{ $jadwal->hari }}', '{{ substr($jadwal->jam_mulai, 0, 5) }}')">
+                                        <button class="bg-[#2d4499] hover:bg-[#1e2d6b] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200" onclick="showDaftarModal({{ $jadwal->id }}, '{{ $jadwal->dokter->poli->nama_poli ?? 'Poli' }}', '{{ $jadwal->dokter->nama ?? 'Dokter' }}', '{{ $jadwal->hari }}', '{{ substr($jadwal->jam_mulai, 0, 5) }}')">
                                             Daftar
                                         </button>
                                     @else

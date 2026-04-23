@@ -18,6 +18,8 @@
         "@fortawesome/fontawesome-free": "^7.2.0",
         "daisyui": "^5.5.19",
         "laravel-echo": "^2.3.4",
-        "predis": "^1.1.4"
+        "predis": "^1.1.4",
+        "pusher-js": "^8.5.0",
+        "socket.io-client": "^4.8.3"
     }
 }

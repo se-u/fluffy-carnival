@@ -13,6 +13,12 @@ export default defineConfig({
         port: 5173,
         hmr: {
             host: 'localhost'
-        }
+        },
+        proxy: {
+            '/ws': {
+                target: 'ws://127.0.0.1:8090',
+                ws: true,
+            },
+        },
     },
 });

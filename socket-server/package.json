@@ -1,0 +1,12 @@
+{
+  "name": "poliklinik-socket-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.4",
+    "cors": "^2.8.5"
+  }
+}

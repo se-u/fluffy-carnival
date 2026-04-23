@@ -14,7 +14,7 @@ class JadwalPeriksaExport
         $dokterId = Auth::id();
 
         $jadwals = JadwalPeriksa::where('id_dokter', $dokterId)
-            ->with('poli')
+            ->with('dokter.poli')
             ->get();
 
         $spreadsheet = new Spreadsheet();

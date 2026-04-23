@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\AntrianUpdated;
 use App\Models\DaftarPoli;
 use App\Models\DetailPeriksa;
 use App\Models\JadwalPeriksa;
@@ -11,6 +10,7 @@ use App\Models\Periksa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class PeriksaController extends Controller
 {
@@ -54,19 +54,26 @@ class PeriksaController extends Controller
             ->orderBy('no_antrian')
             ->first();
 
-        // Update no_antrian_sekarang to next patient's number, or +1 if no one waiting
-        $nextAntrian = $nextPatient ? $nextPatient->no_antrian : $jadwal->no_antrian_sekarang + 1;
+        // If no pending patient, do NOT increment - show error
+        if (!$nextPatient) {
+            return redirect()->back()->with('error', 'Tidak ada pasien yang menunggu di antrian!');
+        }
 
-        $jadwal->update(['no_antrian_sekarang' => $nextAntrian]);
+        // Update no_antrian_sekarang to next patient's number
+        $jadwal->update(['no_antrian_sekarang' => $nextPatient->no_antrian]);
 
-        // Broadcast the update
-        event(new AntrianUpdated(
-            $jadwal->id,
-            $nextAntrian,
-            $jadwal->getRemainingQueueCount()
-        ));
+        // Emit via Socket.io
+        Http::post('http://' . env('SOCKETIO_HOST') . ':' . env('SOCKETIO_PORT') . '/emit', [
+            'channel' => 'antrian.' . $jadwal->id,
+            'event' => 'AntrianUpdated',
+            'data' => [
+                'jadwalId' => $jadwal->id,
+                'noAntrianSekarang' => $nextPatient->no_antrian,
+                'sisaAntrian' => $jadwal->getRemainingQueueCount(),
+            ],
+        ]);
 
-        return redirect()->back()->with('success', 'Pasien dipanggil: Antrian #' . $nextAntrian);
+        return redirect()->back()->with('success', 'Pasien dipanggil: Antrian #' . $nextPatient->no_antrian);
     }
 
     public function store(Request $request, $id)
@@ -138,12 +145,16 @@ class PeriksaController extends Controller
             $nextAntrian = $jadwal->no_antrian_sekarang + 1;
             $jadwal->update(['no_antrian_sekarang' => $nextAntrian]);
 
-            // Broadcast the update
-            event(new AntrianUpdated(
-                $jadwal->id,
-                $nextAntrian,
-                $jadwal->getRemainingQueueCount()
-            ));
+            // Emit via Socket.io
+            Http::post('http://' . env('SOCKETIO_HOST') . ':' . env('SOCKETIO_PORT') . '/emit', [
+                'channel' => 'antrian.' . $jadwal->id,
+                'event' => 'AntrianUpdated',
+                'data' => [
+                    'jadwalId' => $jadwal->id,
+                    'noAntrianSekarang' => $nextAntrian,
+                    'sisaAntrian' => $jadwal->getRemainingQueueCount(),
+                ],
+            ]);
 
             DB::commit();
 

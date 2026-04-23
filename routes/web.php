@@ -12,7 +12,60 @@ use App\Http\Controllers\PasienCrudController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\PeriksaController;
 use App\Http\Controllers\PoliController;
+use App\Events\TestHello;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
+
+// Socket.io emit endpoint - Laravel calls this to broadcast
+Route::post('/socketio/emit', function (Request $request) {
+    $channel = $request->input('channel');
+    $event = $request->input('event');
+    $data = $request->input('data');
+
+    $response = Http::post('http://' . env('SOCKETIO_HOST') . ':' . env('SOCKETIO_PORT') . '/emit', [
+        'channel' => $channel,
+        'event' => $event,
+        'data' => $data,
+    ]);
+
+    return $response->json();
+});
+
+// API route for polling antrian data
+Route::get('/api/antrian-data', function () {
+    $jadwals = \App\Models\JadwalPeriksa::with('dokter.poli')->get();
+    return response()->json($jadwals->map(function($j) {
+        return [
+            'id' => $j->id,
+            'no_antrian_sekarang' => $j->no_antrian_sekarang,
+            'hari' => $j->hari,
+            'jam_mulai' => $j->jam_mulai,
+            'jam_selesai' => $j->jam_selesai,
+            'dokter' => $j->dokter ? [
+                'nama' => $j->dokter->nama,
+                'poli' => $j->dokter->poli ? $j->dokter->poli->nama_poli : null,
+            ] : null,
+        ];
+    }));
+});
+
+// Test broadcast route
+Route::get('/test-broadcast', function () {
+    event(new TestHello());
+    return 'TestHello event dispatched!';
+});
+
+// Test AntrianUpdated broadcast route
+Route::get('/test-antrian-broadcast', function () {
+    $jadwal = \App\Models\JadwalPeriksa::first();
+    event(new \App\Events\AntrianUpdated($jadwal->id, 99, 5));
+    return 'AntrianUpdated event dispatched for jadwal ID: ' . $jadwal->id;
+});
+
+// WebSocket test page
+Route::get('/ws-test', function () {
+    return view('ws-test');
+})->middleware('auth');
 
 // Guest routes (without auth)
 Route::middleware('guest')->group(function () {
@@ -25,8 +78,17 @@ Route::middleware('guest')->group(function () {
 // Logout (requires auth)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Default welcome page
+// Default welcome page - redirect authenticated users to their dashboard
 Route::get('/', function () {
+    if (Auth::check()) {
+        $user = Auth::user();
+        return match ($user->role) {
+            'admin' => redirect()->route('dashboard'),
+            'dokter' => redirect()->route('dokter.dashboard'),
+            'pasien' => redirect()->route('pasien.dashboard'),
+            default => view('welcome'),
+        };
+    }
     return view('welcome');
 });
 

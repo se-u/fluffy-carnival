@@ -31,6 +31,6 @@ class AntrianUpdated implements ShouldBroadcast
 
     public function broadcastAs()
     {
-        return 'antrian.updated';
+        return 'AntrianUpdated';
     }
 }

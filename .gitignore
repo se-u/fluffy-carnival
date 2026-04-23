@@ -1,5 +1,7 @@
 /.phpunit.cache
 /node_modules
+**/*/node_modules
+CLAUDE.md
 /public/build
 /public/hot
 /public/storage

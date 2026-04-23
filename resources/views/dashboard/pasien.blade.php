@@ -135,35 +135,76 @@
 
     @push('scripts')
     <script>
-        // Pass jadwal IDs to JavaScript using data attributes
-        const jadwalIds = @json($allJadwalIds);
+        document.addEventListener('DOMContentLoaded', function() {
+            const jadwalIds = @json($allJadwalIds);
+            const userAntrian = parseInt(document.getElementById('user-antrian')?.textContent) || null;
+            let popupShown = false;
 
-        // Listen for realtime queue updates on each jadwal channel
-        jadwalIds.forEach(function(jadwalId) {
-            if (window.Echo) {
-                Echo.channel('antrian.' + jadwalId)
-                    .listen('.antrian.updated', (event) => {
-                        // Update table row for this jadwal
-                        const row = document.querySelector('tr[data-jadwal-id="' + jadwalId + '"]');
-                        if (row) {
-                            const antrianBadge = row.querySelector('.jadwal-antrian');
-                            if (antrianBadge) {
-                                antrianBadge.textContent = event.noAntrianSekarang;
-                                antrianBadge.dataset.antrian = event.noAntrianSekarang;
-                            }
+            if (window.socketClient) {
+                jadwalIds.forEach(function(jadwalId) {
+                    window.socketClient.join('antrian.' + jadwalId);
+                });
+
+                window.socketClient.on('AntrianUpdated', function(event) {
+                    console.log('[SocketIO] Received AntrianUpdated:', event);
+                    const jadwalId = event.jadwalId;
+
+                    // Update table row
+                    const row = document.querySelector('tr[data-jadwal-id="' + jadwalId + '"]');
+                    if (row) {
+                        const antrianBadge = row.querySelector('.jadwal-antrian');
+                        if (antrianBadge) {
+                            antrianBadge.textContent = event.noAntrianSekarang;
+                        }
+                    }
+
+                    // Update banner antrian aktif
+                    const banner = document.querySelector('[data-jadwal-id="' + jadwalId + '"]');
+                    if (banner) {
+                        const serveEl = document.getElementById('serve-antrian');
+                        if (serveEl) {
+                            serveEl.textContent = event.noAntrianSekarang;
                         }
 
-                        // Update banner antrian aktif if it matches this jadwal
-                        const banner = document.querySelector('[data-jadwal-id="' + jadwalId + '"]');
-                        if (banner) {
-                            const serveEl = document.getElementById('serve-antrian');
-                            if (serveEl) {
-                                serveEl.textContent = event.noAntrianSekarang;
-                            }
+                        // Check if it's user's turn
+                        if (userAntrian && event.noAntrianSekarang === userAntrian && !popupShown) {
+                            popupShown = true;
+                            showGiliranPopup();
                         }
-                    });
+                    }
+                });
+            }
+
+            function showGiliranPopup() {
+                const popup = document.createElement('div');
+                popup.id = 'giliran-popup';
+                popup.innerHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <div style="background:white;border-radius:16px;padding:32px;text-align:center;max-width:400px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:popup-appear 0.3s ease-out">
+                            <div style="font-size:64px;margin-bottom:16px;">🔔</div>
+                            <h2 style="font-size:24px;font-weight:bold;color:#1e2d6b;margin-bottom:8px;">Sekarang Giliran Anda!</h2>
+                            <p style="color:#666;margin-bottom:24px;">Silakan menuju ruang pemeriksaan</p>
+                            <p style="font-size:18px;color:#1e2d6b;margin-bottom:24px;">Nomor Antrian: <strong style="font-size:32px;color:#2d4499;">${userAntrian}</strong></p>
+                            <button onclick="this.closest('#giliran-popup').remove()" style="background:#2d4499;color:white;border:none;padding:12px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-weight:600;">OK</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(popup);
+
+                // Auto-dismiss after 10 seconds
+                setTimeout(() => {
+                    if (document.getElementById('giliran-popup')) {
+                        popup.remove();
+                    }
+                }, 10000);
             }
         });
     </script>
+    <style>
+        @keyframes popup-appear {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
     @endpush
 </x-layouts.app>
